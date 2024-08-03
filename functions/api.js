@@ -13,32 +13,31 @@ exports.handler = async (event, context) => {
 
   console.log('Event Headers:', event.headers);
   
-  // Check for the correct header name and use a fallback
   const origin = event.headers.origin || event.headers.Origin || '';
   const isAllowedOrigin = allowedOrigins.includes(origin);
 
   console.log('Origin:', origin);
   console.log('Is Allowed Origin:', isAllowedOrigin);
 
+  const headers = {
+    'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+
   if (event.httpMethod === 'OPTIONS') {
     // Handle preflight request
     return {
       statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Max-Age': '86400', // 24 hours
-      },
+      headers,
+      body: 'OK',
     };
   }
 
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
-      headers: {
-        'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
-      },
+      headers,
       body: JSON.stringify({ error: 'Method not allowed' }),
     };
   }
@@ -59,9 +58,7 @@ exports.handler = async (event, context) => {
       console.error('FFmpeg binary not found at', ffmpegPath);
       return {
         statusCode: 500,
-        headers: {
-          'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
-        },
+        headers,
         body: JSON.stringify({ error: 'FFmpeg binary not found' }),
       };
     }
@@ -109,7 +106,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 200,
       headers: {
-        'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
+        ...headers,
         'Content-Type': 'audio/mpeg',
       },
       body: fileData.toString('base64'),
@@ -119,9 +116,7 @@ exports.handler = async (event, context) => {
     console.error('Conversion failed:', error);
     return {
       statusCode: 500,
-      headers: {
-        'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
-      },
+      headers,
       body: JSON.stringify({ error: 'Conversion failed', details: error.message }),
     };
   }
