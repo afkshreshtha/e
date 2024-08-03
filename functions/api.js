@@ -14,9 +14,9 @@ exports.handler = async (event, context) => {
   const origin = event.headers.origin;
   const isAllowedOrigin = allowedOrigins.includes(origin);
 
-  if (!isAllowedOrigin) {
+  if (isAllowedOrigin) {
     return {
-      statusCode: 403,
+      statusCode: 200,
       headers: {
         'Access-Control-Allow-Origin': '*', // Allow all origins for testing; adjust as necessary
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -38,7 +38,7 @@ exports.handler = async (event, context) => {
       },
     };
   }
-  
+
   if (event.httpMethod === 'POST') {
     // Your actual request processing code
     return {
