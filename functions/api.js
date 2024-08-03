@@ -27,13 +27,13 @@ exports.handler = async (event, context) => {
     // Check if the FFmpeg binary exists
     if (!fs.existsSync(ffmpegPath)) {
       console.error('FFmpeg binary not found at', ffmpegPath)
-      return resolve({
+      return {
         statusCode: 500,
         headers: {
           ...corsHeaders,
         },
         body: JSON.stringify({ error: 'FFmpeg binary not found' }),
-      })
+      }
     }
 
     // Download audio file
@@ -80,7 +80,7 @@ exports.handler = async (event, context) => {
     fs.unlinkSync(imagePath)
     fs.unlinkSync(outputPath)
 
-    return resolve({
+    return {
       statusCode: 200,
       headers: {
         ...corsHeaders,
@@ -88,16 +88,16 @@ exports.handler = async (event, context) => {
       },
       body: fileData.toString('base64'),
       isBase64Encoded: true,
-    })
+    }
   } catch (error) {
     console.error('Conversion failed:', error)
-    return resolve({
+    return {
       statusCode: 500,
       headers: corsHeaders,
       body: JSON.stringify({
         error: 'Conversion failed',
         details: error.message,
       }),
-    })
+    }
   }
 }
