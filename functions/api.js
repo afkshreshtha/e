@@ -9,18 +9,16 @@ const execPromise = util.promisify(exec);
 const TEMP_DIR = '/tmp'; // Temporary directory for serverless functions
 
 exports.handler = async (event, context) => {
-  const allowedOrigins = ['http://localhost:3000', 'https://tunewave.vercel.app', 'https://audichangerr.netlify.app'];
+  // const allowedOrigins = ['http://localhost:3000', 'https://tunewave.vercel.app', 'https://audichangerr.netlify.app'];
 
-  console.log('Event Headers:', event.headers);
-  
-  const origin = event.headers.origin || event.headers.Origin || '';
-  const isAllowedOrigin = allowedOrigins.includes(origin);
+  // const origin = event.headers.origin || event.headers.Origin || '';
+  // const isAllowedOrigin = allowedOrigins.includes(origin);
 
-  console.log('Origin:', origin);
-  console.log('Is Allowed Origin:', isAllowedOrigin);
+  // console.log('Origin:', origin);
+  // console.log('Is Allowed Origin:', isAllowedOrigin);
 
   const headers = {
-    'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
+    'Access-Control-Allow-Origin': "http://localhost:3000",
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   };
