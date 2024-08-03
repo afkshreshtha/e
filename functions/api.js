@@ -9,37 +9,12 @@ const execPromise = util.promisify(exec);
 const TEMP_DIR = '/tmp'; // Temporary directory for serverless functions
 
 exports.handler = async (event, context) => {
-  // const allowedOrigins = ['http://localhost:3000', 'https://tunewave.vercel.app', 'https://audichangerr.netlify.app'];
-
-  // const origin = event.headers.origin || event.headers.Origin || '';
-  // const isAllowedOrigin = allowedOrigins.includes(origin);
-
-  // console.log('Origin:', origin);
-  // console.log('Is Allowed Origin:', isAllowedOrigin);
-
   const headers = {
+     'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Allow-Origin': "*",
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'OPTIONS,POST',
+   
   };
-
-  if (event.httpMethod === 'OPTIONS') {
-    // Handle preflight request
-    return {
-      statusCode: 200,
-      headers,
-      body: 'OK',
-    };
-  }
-
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    };
-  }
-
   const body = JSON.parse(event.body);
   const { audioUrl, imageUrl, artists, album } = body;
 
