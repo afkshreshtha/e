@@ -11,9 +11,14 @@ const TEMP_DIR = '/tmp'; // Temporary directory for serverless functions
 exports.handler = async (event, context) => {
   const allowedOrigins = ['http://localhost:3000', 'https://tunewave.vercel.app', 'https://audichangerr.netlify.app'];
 
-  const origin = event.headers.origin;
-  console.log(origin,allowedOrigins)
+  console.log('Event Headers:', event.headers);
+  
+  // Check for the correct header name and use a fallback
+  const origin = event.headers.origin || event.headers.Origin || '';
   const isAllowedOrigin = allowedOrigins.includes(origin);
+
+  console.log('Origin:', origin);
+  console.log('Is Allowed Origin:', isAllowedOrigin);
 
   if (event.httpMethod === 'OPTIONS') {
     // Handle preflight request
