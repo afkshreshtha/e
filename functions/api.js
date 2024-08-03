@@ -4,7 +4,11 @@ const path = require('path');
 const { exec } = require('child_process');
 const util = require('util');
 const ffmpegPath = require('ffmpeg-static');
-const cors = require('cors')({ origin: ['http://localhost:3000', 'https://tunewave.vercel.app', 'https://audichangerr.netlify.app'] });
+const express = require('express');
+const cors = require('cors')
+
+const app = express()
+app.use(cors())
 
 const execPromise = util.promisify(exec);
 const TEMP_DIR = '/tmp'; // Temporary directory for serverless functions
