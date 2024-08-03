@@ -9,29 +9,21 @@ const execPromise = util.promisify(exec);
 const TEMP_DIR = '/tmp'; // Temporary directory for serverless functions
 
 exports.handler = async (event, context) => {
-  const allowedOrigins = ['http://localhost:3000', 'https://tunewave.vercel.app', 'https://audichangerr.netlify.app'];
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'https://tunewave.vercel.app',
+    'https://audichangerr.netlify.app',
+  ];
 
   const origin = event.headers.origin;
   const isAllowedOrigin = allowedOrigins.includes(origin);
-
-  if (isAllowedOrigin) {
-    return {
-      statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': '*', // Allow all origins for testing; adjust as necessary
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-      },
-      body: JSON.stringify({ error: 'Origin not allowed' }),
-    };
-  }
 
   if (event.httpMethod === 'OPTIONS') {
     // Handle preflight request
     return {
       statusCode: 200,
       headers: {
-        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Max-Age': '86400', // 24 hours
@@ -39,20 +31,29 @@ exports.handler = async (event, context) => {
     };
   }
 
-
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
       headers: {
-        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
       },
       body: JSON.stringify({ error: 'Method not allowed' }),
     };
   }
 
+  if (!isAllowedOrigin) {
+    return {
+      statusCode: 403,
+      headers: {
+        'Access-Control-Allow-Origin': origin,
+      },
+      body: JSON.stringify({ error: 'Origin not allowed' }),
+    };
+  }
+
   const body = JSON.parse(event.body);
   const { audioUrl, imageUrl, artists, album } = body;
-console.log(audioUrl, imageUrl , artists, album);
+  console.log(audioUrl, imageUrl, artists, album);
   const audioPath = path.join(TEMP_DIR, 'input.mp4');
   const imagePath = path.join(TEMP_DIR, 'cover.jpg');
   const outputPath = path.join(TEMP_DIR, 'output.mp3');
@@ -67,7 +68,7 @@ console.log(audioUrl, imageUrl , artists, album);
       return {
         statusCode: 500,
         headers: {
-          'Access-Control-Allow-Origin': origin,
+          'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
         },
         body: JSON.stringify({ error: 'FFmpeg binary not found' }),
       };
@@ -106,7 +107,11 @@ console.log(audioUrl, imageUrl , artists, album);
     console.log('Image file exists:', fs.existsSync(imagePath));
 
     // Execute ffmpeg command
-    await execPromise(`${ffmpegPath} -i ${audioPath} -i ${imagePath} -c:v mjpeg -id3v2_version 3 -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (front)" -metadata artist="${artists.join(', ')}" -metadata album="${album}" ${outputPath}`);
+    await execPromise(
+      `${ffmpegPath} -i ${audioPath} -i ${imagePath} -c:v mjpeg -id3v2_version 3 -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (front)" -metadata artist="${artists.join(
+        ', ',
+      )}" -metadata album="${album}" ${outputPath}`,
+    );
 
     const fileData = fs.readFileSync(outputPath);
     fs.unlinkSync(audioPath);
@@ -116,7 +121,7 @@ console.log(audioUrl, imageUrl , artists, album);
     return {
       statusCode: 200,
       headers: {
-        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
         'Content-Type': 'audio/mpeg',
       },
       body: fileData.toString('base64'),
@@ -127,9 +132,12 @@ console.log(audioUrl, imageUrl , artists, album);
     return {
       statusCode: 500,
       headers: {
-        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
       },
-      body: JSON.stringify({ error: 'Conversion failed', details: error.message }),
+      body: JSON.stringify({
+        error: 'Conversion failed',
+        details: error.message,
+      }),
     };
   }
 };
