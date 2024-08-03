@@ -16,29 +16,6 @@ const TEMP_DIR = '/tmp'; // Temporary directory for serverless functions
 exports.handler = async (event, context) => {
   return new Promise((resolve, reject) => {
     cors(event, context, async () => {
-      if (event.httpMethod === 'OPTIONS') {
-        // Handle preflight request
-        return resolve({
-          statusCode: 200,
-          headers: {
-            'Access-Control-Allow-Origin': event.headers.origin,
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-            'Access-Control-Max-Age': '86400', // 24 hours
-          },
-        });
-      }
-
-      if (event.httpMethod !== 'POST') {
-        return resolve({
-          statusCode: 405,
-          headers: {
-            'Access-Control-Allow-Origin': event.headers.origin,
-          },
-          body: JSON.stringify({ error: 'Method not allowed' }),
-        });
-      }
-
       const body = JSON.parse(event.body);
       const { audioUrl, imageUrl, artists, album } = body;
 
@@ -49,7 +26,6 @@ exports.handler = async (event, context) => {
       try {
         // Log FFmpeg path
         console.log('FFmpeg path:', ffmpegPath);
-
         // Check if the FFmpeg binary exists
         if (!fs.existsSync(ffmpegPath)) {
           console.error('FFmpeg binary not found at', ffmpegPath);
