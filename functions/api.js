@@ -18,7 +18,7 @@ exports.handler = async (event, context) => {
   // console.log('Is Allowed Origin:', isAllowedOrigin);
 
   const headers = {
-    'Access-Control-Allow-Origin': "http://localhost:3000",
+    // 'Access-Control-Allow-Origin': "http://localhost:3000",
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
   };
