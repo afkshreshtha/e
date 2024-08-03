@@ -38,6 +38,19 @@ exports.handler = async (event, context) => {
       },
     };
   }
+  
+  if (event.httpMethod === 'POST') {
+    // Your actual request processing code
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': origin,
+        'Content-Type': 'audio/mpeg',
+      },
+      body: fileData.toString('base64'),
+      isBase64Encoded: true,
+    };
+  }
 
   if (event.httpMethod !== 'POST') {
     return {
