@@ -17,7 +17,7 @@ exports.handler = async (event, context) => {
 
   const origin = event.headers.origin;
   const isAllowedOrigin = allowedOrigins.includes(origin);
-
+  console.log(event.httpMethod)
   if (event.httpMethod === 'OPTIONS') {
     // Handle preflight request
     return {
