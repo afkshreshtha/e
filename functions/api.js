@@ -52,7 +52,7 @@ exports.handler = async (event, context) => {
 
   const body = JSON.parse(event.body);
   const { audioUrl, imageUrl, artists, album } = body;
-
+console.log(audioUrl, imageUrl , artists, album);
   const audioPath = path.join(TEMP_DIR, 'input.mp4');
   const imagePath = path.join(TEMP_DIR, 'cover.jpg');
   const outputPath = path.join(TEMP_DIR, 'output.mp3');
