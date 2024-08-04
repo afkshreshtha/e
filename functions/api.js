@@ -30,6 +30,19 @@ exports.handler = async (event, context) => {
       },
     };
   }
+  
+  if (event.httpMethod === 'POST') {
+    // Handle preflight request
+    return {
+      statusCode: 200,
+      headers: {
+        'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Max-Age': '86400', // 24 hours
+      },
+    };
+  }
 
   if (event.httpMethod !== 'POST') {
     return {
