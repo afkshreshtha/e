@@ -1,125 +1,87 @@
-const express = require('express')
-const ffmpeg = require('fluent-ffmpeg')
-const path = require('path')
-const fs = require('fs')
-const axios = require('axios')
-const app = express()
-const serverless  = require("serverless-http")
-const port = 3001
-const router = express.Router()
-const cors = require('cors')
+const express = require('express');
+const ffmpeg = require('fluent-ffmpeg');
+const axios = require('axios');
+const stream = require('stream');
+const serverless = require("serverless-http");
+const cors = require('cors');
+
+const app = express();
+const router = express.Router();
+const port = 3001;
 
 app.use(cors({
-  origin:"http://localhost:3000"
-}))
+  origin: "http://localhost:3000"
+}));
 
-// Middleware to parse JSON bodies
-app.use(express.json())
+app.use(express.json());
 
-// Function to download a file from a URL
-const downloadFile = async (url, outputPath) => {
+// Function to download a file from a URL into a buffer
+const downloadFileToBuffer = async (url) => {
   const response = await axios({
     url,
     method: 'GET',
-    responseType: 'stream',
-  })
+    responseType: 'arraybuffer',
+  });
+  return response.data;
+};
 
-  const writer = fs.createWriteStream(outputPath)
-
-  return new Promise((resolve, reject) => {
-    response.data.pipe(writer)
-    let error = null
-    writer.on('error', (err) => {
-      error = err
-      writer.close()
-      reject(err)
-    })
-    writer.on('close', () => {
-      if (!error) {
-        resolve()
-      }
-    })
-  })
-}
-
-// Endpoint to handle M4A to MP3 conversion with cover image, artist, and album
 router.post('/convert', async (req, res) => {
-  const { audioUrl, imageUrl, artists, album } = req.body
+  const { audioUrl, imageUrl, artists, album } = req.body;
 
-  if (!audioUrl) {
-    return res.status(400).json({ error: 'Audio URL is required' })
+  if (!audioUrl || !imageUrl || !artists || !album) {
+    return res.status(400).json({ error: 'Audio URL, Image URL, artist name, and album name are required' });
   }
-
-  if (!imageUrl) {
-    return res.status(400).json({ error: 'Image URL is required' })
-  }
-
-  if (!artists) {
-    return res.status(400).json({ error: 'Artist name is required' })
-  }
-
-  if (!album) {
-    return res.status(400).json({ error: 'Album name is required' })
-  }
-
-  const inputPath = path.join(__dirname, 'input.m4a')
-  const outputPath = path.join(__dirname, 'output.mp3')
-  const imagePath = path.join(__dirname, 'cover.jpg')
 
   try {
-    // Download the audio and image files
-    await downloadFile(audioUrl, inputPath)
-    await downloadFile(imageUrl, imagePath)
+    const audioBuffer = await downloadFileToBuffer(audioUrl);
+    const imageBuffer = await downloadFileToBuffer(imageUrl);
 
-    // Check if the files are valid
-    if (!fs.existsSync(inputPath)) {
-      throw new Error('Audio file download failed')
-    }
+    const audioStream = new stream.PassThrough();
+    const imageStream = new stream.PassThrough();
+    
+    audioStream.end(audioBuffer);
+    imageStream.end(imageBuffer);
 
-    if (!fs.existsSync(imagePath)) {
-      throw new Error('Image file download failed')
-    }
+    const outputBuffers = [];
 
-    // Convert M4A to MP3 and add the image as cover
     ffmpeg()
-      .input(inputPath)
-      .input(imagePath)
+      .input(audioStream)
+      .input(imageStream)
+      .inputFormat('m4a')
+      .inputFormat('mjpeg')
       .outputOptions('-map', '0:a')
       .outputOptions('-map', '1')
       .outputOptions('-c:v', 'mjpeg')
       .outputOptions('-id3v2_version', '3')
       .outputOptions('-metadata:s:v', 'title="Album cover"')
       .outputOptions('-metadata:s:v', 'comment="Cover (front)"')
-      .outputOptions('-metadata', `artist="${artists}"`) // Add artist metadata
-      .outputOptions('-metadata', `album="${album}"`) // Add album metadata
-      .output(outputPath)
+      .outputOptions('-metadata', `artist="${artists}"`)
+      .outputOptions('-metadata', `album="${album}"`)
+      .format('mp3')
       .on('start', (cmd) => {
-        console.log('Started ffmpeg with command:', cmd)
+        console.log('Started ffmpeg with command:', cmd);
       })
       .on('end', () => {
-        console.log('Conversion finished')
-        res.download(outputPath, (err) => {
-          if (err) {
-            console.error('Error downloading the file', err)
-            res.status(500).json({ error: 'File download failed' })
-          } else {
-            // Clean up files after download
-            fs.unlinkSync(inputPath)
-            fs.unlinkSync(outputPath)
-            fs.unlinkSync(imagePath)
-          }
-        })
+        console.log('Conversion finished');
+        const outputBuffer = Buffer.concat(outputBuffers);
+        res.set('Content-Type', 'audio/mpeg');
+        res.set('Content-Disposition', 'attachment; filename=output.mp3');
+        res.send(outputBuffer);
       })
       .on('error', (err) => {
-        console.error('Error during conversion', err)
-        res.status(500).json({ error: 'Conversion failed' })
+        console.error('Error during conversion', err);
+        res.status(500).json({ error: 'Conversion failed' });
       })
-      .run()
-  } catch (err) {
-    console.error('Error in the process', err)
-    res.status(500).json({ error: 'Process failed' })
-  }
-})
+      .pipe(new stream.PassThrough(), { end: true })
+      .on('data', (chunk) => {
+        outputBuffers.push(chunk);
+      });
 
-app.use('/.netlify/functions/api',router)
-module.exports.handler = serverless(app)
+  } catch (err) {
+    console.error('Error in the process', err);
+    res.status(500).json({ error: 'Process failed' });
+  }
+});
+
+app.use('/.netlify/functions/api', router);
+module.exports.handler = serverless(app);
