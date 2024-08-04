@@ -1,146 +1,123 @@
-const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
-const { exec } = require('child_process');
-const util = require('util');
-const ffmpegPath = require('ffmpeg-static');
+const express = require('express')
+const ffmpeg = require('fluent-ffmpeg')
+const path = require('path')
+const fs = require('fs')
+const axios = require('axios')
+const app = express()
+const port = 3001
+const cors = require('cors')
+app.use(cors({
+  origin:"http://localhost:3000"
+}))
 
-const execPromise = util.promisify(exec);
-const TEMP_DIR = '/tmp'; // Temporary directory for serverless functions
+// Middleware to parse JSON bodies
+app.use(express.json())
 
-exports.handler = async (event, context) => {
-  const allowedOrigins = [
-    'http://localhost:3000',
-    'https://tunewave.vercel.app',
-    'https://audichangerr.netlify.app',
-    '*'
-  ];
+// Function to download a file from a URL
+const downloadFile = async (url, outputPath) => {
+  const response = await axios({
+    url,
+    method: 'GET',
+    responseType: 'stream',
+  })
 
-  console.log('Event:', event); // Log the entire event object for debugging
-  const origin = event.headers.origin;
-  const isAllowedOrigin = allowedOrigins.includes(origin);
+  const writer = fs.createWriteStream(outputPath)
 
-  const corsHeaders = {
-    'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Max-Age': '86400', // 24 hours
-  };
-
-  if (event.httpMethod === 'OPTIONS') {
-    // Handle preflight request
-    const response = {
-      statusCode: 200,
-      headers: corsHeaders,
-      body: JSON.stringify({ message: 'Preflight request handled' }),
-    };
-    return response;
-  } else if (event.httpMethod === 'POST') {
-    if (!isAllowedOrigin) {
-      const response = {
-        statusCode: 403,
-        headers: corsHeaders,
-        body: JSON.stringify({ error: 'Origin not allowed' }),
-      };
-      return response;
-    }
-
-    const body = JSON.parse(event.body);
-    const { audioUrl, imageUrl, artists, album } = body;
-    console.log(audioUrl, imageUrl, artists, album);
-
-    const audioPath = path.join(TEMP_DIR, 'input.mp4');
-    const imagePath = path.join(TEMP_DIR, 'cover.jpg');
-    const outputPath = path.join(TEMP_DIR, 'output.mp3');
-
-    try {
-      // Log FFmpeg path
-      console.log('FFmpeg path:', ffmpegPath);
-
-      // Check if the FFmpeg binary exists
-      if (!fs.existsSync(ffmpegPath)) {
-        console.error('FFmpeg binary not found at', ffmpegPath);
-        const response = {
-          statusCode: 500,
-          headers: corsHeaders,
-          body: JSON.stringify({ error: 'FFmpeg binary not found' }),
-        };
-        return response;
+  return new Promise((resolve, reject) => {
+    response.data.pipe(writer)
+    let error = null
+    writer.on('error', (err) => {
+      error = err
+      writer.close()
+      reject(err)
+    })
+    writer.on('close', () => {
+      if (!error) {
+        resolve()
       }
+    })
+  })
+}
 
-      // Download audio file
-      const audioResponse = await axios({
-        url: audioUrl,
-        method: 'GET',
-        responseType: 'stream',
-      });
+// Endpoint to handle M4A to MP3 conversion with cover image, artist, and album
+app.post('/convert', async (req, res) => {
+  const { audioUrl, imageUrl, artists, album } = req.body
 
-      await new Promise((resolve, reject) => {
-        const audioWriter = fs.createWriteStream(audioPath);
-        audioResponse.data.pipe(audioWriter);
-        audioWriter.on('finish', resolve);
-        audioWriter.on('error', reject);
-      });
-
-      // Download image file
-      const imageResponse = await axios({
-        url: imageUrl,
-        method: 'GET',
-        responseType: 'stream',
-      });
-
-      await new Promise((resolve, reject) => {
-        const imageWriter = fs.createWriteStream(imagePath);
-        imageResponse.data.pipe(imageWriter);
-        imageWriter.on('finish', resolve);
-        imageWriter.on('error', reject);
-      });
-
-      // Log file existence
-      console.log('Audio file exists:', fs.existsSync(audioPath));
-      console.log('Image file exists:', fs.existsSync(imagePath));
-
-      // Execute ffmpeg command
-      await execPromise(
-        `${ffmpegPath} -i ${audioPath} -i ${imagePath} -c:v mjpeg -id3v2_version 3 -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (front)" -metadata artist="${artists.join(
-          ', ',
-        )}" -metadata album="${album}" ${outputPath}`,
-      );
-
-      const fileData = fs.readFileSync(outputPath);
-      fs.unlinkSync(audioPath);
-      fs.unlinkSync(imagePath);
-      fs.unlinkSync(outputPath);
-
-      const response = {
-        statusCode: 200,
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'audio/mpeg',
-        },
-        body: fileData.toString('base64'),
-        isBase64Encoded: true,
-      };
-      return response;
-    } catch (error) {
-      console.error('Conversion failed:', error);
-      const response = {
-        statusCode: 500,
-        headers: corsHeaders,
-        body: JSON.stringify({
-          error: 'Conversion failed',
-          details: error.message,
-        }),
-      };
-      return response;
-    }
-  } else {
-    // Handle other methods
-    const response = {
-      statusCode: 405,
-      headers: corsHeaders,
-      body: JSON.stringify({ error: 'Method not allowed' }),
-    };
-    return response;
+  if (!audioUrl) {
+    return res.status(400).json({ error: 'Audio URL is required' })
   }
-};
+
+  if (!imageUrl) {
+    return res.status(400).json({ error: 'Image URL is required' })
+  }
+
+  if (!artists) {
+    return res.status(400).json({ error: 'Artist name is required' })
+  }
+
+  if (!album) {
+    return res.status(400).json({ error: 'Album name is required' })
+  }
+
+  const inputPath = path.join(__dirname, 'input.m4a')
+  const outputPath = path.join(__dirname, 'output.mp3')
+  const imagePath = path.join(__dirname, 'cover.jpg')
+
+  try {
+    // Download the audio and image files
+    await downloadFile(audioUrl, inputPath)
+    await downloadFile(imageUrl, imagePath)
+
+    // Check if the files are valid
+    if (!fs.existsSync(inputPath)) {
+      throw new Error('Audio file download failed')
+    }
+
+    if (!fs.existsSync(imagePath)) {
+      throw new Error('Image file download failed')
+    }
+
+    // Convert M4A to MP3 and add the image as cover
+    ffmpeg()
+      .input(inputPath)
+      .input(imagePath)
+      .outputOptions('-map', '0:a')
+      .outputOptions('-map', '1')
+      .outputOptions('-c:v', 'mjpeg')
+      .outputOptions('-id3v2_version', '3')
+      .outputOptions('-metadata:s:v', 'title="Album cover"')
+      .outputOptions('-metadata:s:v', 'comment="Cover (front)"')
+      .outputOptions('-metadata', `artist="${artists}"`) // Add artist metadata
+      .outputOptions('-metadata', `album="${album}"`) // Add album metadata
+      .output(outputPath)
+      .on('start', (cmd) => {
+        console.log('Started ffmpeg with command:', cmd)
+      })
+      .on('end', () => {
+        console.log('Conversion finished')
+        res.download(outputPath, (err) => {
+          if (err) {
+            console.error('Error downloading the file', err)
+            res.status(500).json({ error: 'File download failed' })
+          } else {
+            // Clean up files after download
+            fs.unlinkSync(inputPath)
+            fs.unlinkSync(outputPath)
+            fs.unlinkSync(imagePath)
+          }
+        })
+      })
+      .on('error', (err) => {
+        console.error('Error during conversion', err)
+        res.status(500).json({ error: 'Conversion failed' })
+      })
+      .run()
+  } catch (err) {
+    console.error('Error in the process', err)
+    res.status(500).json({ error: 'Process failed' })
+  }
+})
+
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`)
+})
