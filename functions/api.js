@@ -20,7 +20,7 @@ app.use(
 
 app.use(express.json())
 
-ffmpeg.setFfmpegPath(ffmpegPath)
+
 
 // Convert audio to MP3
 router.post('/convert', async (req, res) => {
