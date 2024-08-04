@@ -60,7 +60,7 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 500,
         headers: {
-          'Access-Control-Allow-Origin': origin,
+          'Access-Control-Allow-Origin': "http://localhost:3000",
         },
         body: JSON.stringify({ error: 'FFmpeg binary not found' }),
       };
@@ -113,7 +113,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 200,
       headers: {
-        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Origin': "http://localhost:3000",
         'Content-Type': 'audio/mpeg',
       },
       body: fileData.toString('base64'),
@@ -124,7 +124,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 500,
       headers: {
-        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Origin': "http://localhost:3000",
       },
       body: JSON.stringify({
         error: 'Conversion failed',
