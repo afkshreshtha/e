@@ -1,19 +1,24 @@
 const express = require('express');
 const ffmpeg = require('fluent-ffmpeg');
 const axios = require('axios');
-const serverless = require("serverless-http");
+const serverless = require('serverless-http');
 const cors = require('cors');
 const fs = require('fs');
 const tmp = require('tmp');
+const path = require('path');
 
 const app = express();
 const router = express.Router();
 
 app.use(cors({
-  origin: "http://localhost:3000"
+  origin: 'http://localhost:3000'
 }));
 
 app.use(express.json());
+
+// Set the custom path to the ffmpeg binary
+const ffmpegPath = path.join(__dirname, 'functions/bin', 'ffmpeg');
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 // Function to download a file from a URL into a buffer
 const downloadFileToBuffer = async (url) => {
