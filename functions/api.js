@@ -5,6 +5,7 @@ const serverless = require('serverless-http');
 const cors = require('cors');
 const fs = require('fs');
 const tmp = require('tmp');
+const path = require('path');
 const ffmpegPath = require('ffmpeg-static');
 
 const app = express();
@@ -50,15 +51,17 @@ router.post('/convert', async (req, res) => {
     ffmpeg()
       .input(audioTmpFile.name)
       .input(imageTmpFile.name)
-      .outputOptions('-map', '0:a')
-      .outputOptions('-map', '1')
-      .outputOptions('-c:v', 'mjpeg')
-      .outputOptions('-id3v2_version', '3')
-      .outputOptions('-metadata:s:v', 'title="Album cover"')
+      .inputFormat('m4a') // Specify input format if needed
+      .outputOptions('-map', '0:a') // Map audio stream
+      .outputOptions('-map', '1') // Map image stream
+      .outputOptions('-c:v', 'mjpeg') // Video codec for image
+      .outputOptions('-id3v2_version', '3') // ID3 version for metadata
+      .outputOptions('-metadata:s:v', 'title="Album cover"') // Metadata for cover image
       .outputOptions('-metadata:s:v', 'comment="Cover (front)"')
-      .outputOptions('-metadata', `artist="${artists}"`)
-      .outputOptions('-metadata', `album="${album}"`)
-      .save(outputTmpFile.name)
+      .outputOptions('-metadata', `artist="${artists}"`) // Metadata for artist
+      .outputOptions('-metadata', `album="${album}"`) // Metadata for album
+      .audioCodec('libmp3lame') // Audio codec for MP3
+      .toFormat('mp3') // Output format
       .on('start', (cmd) => {
         console.log('Started ffmpeg with command:', cmd);
       })
@@ -75,17 +78,18 @@ router.post('/convert', async (req, res) => {
         outputTmpFile.removeCallback();
       })
       .on('error', (err) => {
-        console.error('Error during conversion', err);
+        console.error('Error during conversion:', err.message);
         res.status(500).json({ error: 'Conversion failed' });
 
         // Clean up temporary files on error
         audioTmpFile.removeCallback();
         imageTmpFile.removeCallback();
         outputTmpFile.removeCallback();
-      });
+      })
+      .save(outputTmpFile.name);
 
   } catch (err) {
-    console.error('Error in the process', err);
+    console.error('Error in the process:', err.message);
     res.status(500).json({ error: 'Process failed' });
   }
 });
