@@ -4,4 +4,4 @@
   publish = "."
 
 [functions]
-timeout = 50
+  timeout = 50
