@@ -1,4 +1,3 @@
 [build]
-  command = "chmod +x functions/bin/ffmpeg && npm run build"
   functions = "functions"
   publish = "."

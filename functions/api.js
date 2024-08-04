@@ -5,7 +5,7 @@ const serverless = require('serverless-http');
 const cors = require('cors');
 const fs = require('fs');
 const tmp = require('tmp');
-const path = require('path');
+const ffmpegPath = require('ffmpeg-static');
 
 const app = express();
 const router = express.Router();
@@ -16,8 +16,7 @@ app.use(cors({
 
 app.use(express.json());
 
-// Set the custom path to the ffmpeg binary
-const ffmpegPath = path.join(__dirname, 'bin', 'ffmpeg');
+// Set the path to the ffmpeg binary using ffmpeg-static
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 // Function to download a file from a URL into a buffer
