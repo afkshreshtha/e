@@ -15,23 +15,22 @@ exports.handler = async (event, context) => {
     'https://audichangerr.netlify.app',
   ];
 
+  console.log('Event:', event); // Log the entire event object for debugging
   const origin = event.headers.origin;
   const isAllowedOrigin = allowedOrigins.includes(origin);
-  console.log(allowedOrigins)
-  console.log(origin)
-  console.log(isAllowedOrigin)
-  console.log(event.httpMethod === 'POST')
+
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Max-Age': '86400', // 24 hours
+  };
 
   if (event.httpMethod === 'OPTIONS') {
     // Handle preflight request
     const response = {
       statusCode: 200,
-      headers: {
-        'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Max-Age': '86400', // 24 hours
-      },
+      headers: corsHeaders,
       body: JSON.stringify({ message: 'Preflight request handled' }),
     };
     return response;
@@ -39,9 +38,7 @@ exports.handler = async (event, context) => {
     if (!isAllowedOrigin) {
       const response = {
         statusCode: 403,
-        headers: {
-          'Access-Control-Allow-Origin': '',
-        },
+        headers: corsHeaders,
         body: JSON.stringify({ error: 'Origin not allowed' }),
       };
       return response;
@@ -64,9 +61,7 @@ exports.handler = async (event, context) => {
         console.error('FFmpeg binary not found at', ffmpegPath);
         const response = {
           statusCode: 500,
-          headers: {
-            'Access-Control-Allow-Origin': origin,
-          },
+          headers: corsHeaders,
           body: JSON.stringify({ error: 'FFmpeg binary not found' }),
         };
         return response;
@@ -119,7 +114,7 @@ exports.handler = async (event, context) => {
       const response = {
         statusCode: 200,
         headers: {
-          'Access-Control-Allow-Origin': origin,
+          ...corsHeaders,
           'Content-Type': 'audio/mpeg',
         },
         body: fileData.toString('base64'),
@@ -130,9 +125,7 @@ exports.handler = async (event, context) => {
       console.error('Conversion failed:', error);
       const response = {
         statusCode: 500,
-        headers: {
-          'Access-Control-Allow-Origin': origin,
-        },
+        headers: corsHeaders,
         body: JSON.stringify({
           error: 'Conversion failed',
           details: error.message,
@@ -144,9 +137,7 @@ exports.handler = async (event, context) => {
     // Handle other methods
     const response = {
       statusCode: 405,
-      headers: {
-        'Access-Control-Allow-Origin': origin,
-      },
+      headers: corsHeaders,
       body: JSON.stringify({ error: 'Method not allowed' }),
     };
     return response;
