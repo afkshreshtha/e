@@ -4,8 +4,11 @@ const path = require('path')
 const fs = require('fs')
 const axios = require('axios')
 const app = express()
+const serverless  = require("serverless-http")
 const port = 3001
+const router = express.Router()
 const cors = require('cors')
+
 app.use(cors({
   origin:"http://localhost:3000"
 }))
@@ -40,7 +43,7 @@ const downloadFile = async (url, outputPath) => {
 }
 
 // Endpoint to handle M4A to MP3 conversion with cover image, artist, and album
-app.post('/convert', async (req, res) => {
+router.post('/convert', async (req, res) => {
   const { audioUrl, imageUrl, artists, album } = req.body
 
   if (!audioUrl) {
@@ -118,6 +121,5 @@ app.post('/convert', async (req, res) => {
   }
 })
 
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`)
-})
+app.use('/.netlify/functions/api',router)
+module.exports.handler = serverless(app)
