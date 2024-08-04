@@ -17,7 +17,7 @@ app.use(cors({
 app.use(express.json());
 
 // Set the custom path to the ffmpeg binary
-const ffmpegPath = path.join(__dirname, 'functions/bin', 'ffmpeg');
+const ffmpegPath = path.join(__dirname, 'bin', 'ffmpeg');
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 // Function to download a file from a URL into a buffer
