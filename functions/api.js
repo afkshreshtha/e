@@ -17,8 +17,9 @@ exports.handler = async (event, context) => {
 
   const origin = event.headers.origin;
   const isAllowedOrigin = allowedOrigins.includes(origin);
-  console.log(event.httpMethod === 'OPTIONS')
-  if (event.httpMethod === 'OPTIONS') {
+  console.log( "Oprions",event.httpMethod === 'OPTIONS')
+  console.log( "POST",event.httpMethod === 'POST')
+  if (event.httpMethod === 'POST') {
     // Handle preflight request
     return {
       statusCode: 200,
