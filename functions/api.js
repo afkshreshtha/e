@@ -37,6 +37,11 @@ router.post('/convert', async (req, res) => {
     return res.status(400).json({ error: 'Audio URL, Image URL, artist name, and album name are required' });
   }
 
+  console.log("Audio URL: " + audioUrl)
+  console.log("Image URL: " + imageUrl)
+  console.log("Artists: " + artists)
+  console.log("Album: " + album)
+  
   try {
     const audioBuffer = await downloadFileToBuffer(audioUrl);
     const imageBuffer = await downloadFileToBuffer(imageUrl);
@@ -47,6 +52,9 @@ router.post('/convert', async (req, res) => {
 
     fs.writeFileSync(audioTmpFile.name, audioBuffer);
     fs.writeFileSync(imageTmpFile.name, imageBuffer);
+
+    console.log('AudioTmpFile' + ": " + audioTmpFile)
+    console.log('ImageTmpFile' + ": " + imageTmpFile)
 
     ffmpeg()
       .input(audioTmpFile.name)
