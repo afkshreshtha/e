@@ -5,6 +5,7 @@ const cors = require('cors')
 const fs = require('fs')
 const path = require('path')
 const ffmpegPath = require('ffmpeg-static')
+const util = require("util");
 const { exec } = require('child_process')
 const execPromise = util.promisify(exec)
 const app = express()
@@ -19,19 +20,9 @@ app.use(
 
 app.use(express.json())
 
-// Set the path to the ffmpeg binary using ffmpeg-static
 ffmpeg.setFfmpegPath(ffmpegPath)
 
-// Function to download a file from a URL into a buffer
-const downloadFileToBuffer = async (url) => {
-  const response = await axios({
-    url,
-    method: 'GET',
-    responseType: 'arraybuffer',
-  })
-  return response.data
-}
-
+// Convert audio to MP3
 router.post('/convert', async (req, res) => {
   const { audioUrl, imageUrl, artists, album } = req.body
   const audioPath = path.join(TEMP_DIR, 'input.mp4')
