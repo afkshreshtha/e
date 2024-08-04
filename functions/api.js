@@ -1,13 +1,13 @@
 const express = require('express');
 const ffmpeg = require('fluent-ffmpeg');
 const axios = require('axios');
-const stream = require('stream');
 const serverless = require("serverless-http");
 const cors = require('cors');
+const fs = require('fs');
+const tmp = require('tmp');
 
 const app = express();
 const router = express.Router();
-const port = 3001;
 
 app.use(cors({
   origin: "http://localhost:3000"
@@ -36,19 +36,16 @@ router.post('/convert', async (req, res) => {
     const audioBuffer = await downloadFileToBuffer(audioUrl);
     const imageBuffer = await downloadFileToBuffer(imageUrl);
 
-    const audioStream = new stream.PassThrough();
-    const imageStream = new stream.PassThrough();
-    
-    audioStream.end(audioBuffer);
-    imageStream.end(imageBuffer);
+    const audioTmpFile = tmp.fileSync();
+    const imageTmpFile = tmp.fileSync();
+    const outputTmpFile = tmp.fileSync();
 
-    const outputBuffers = [];
+    fs.writeFileSync(audioTmpFile.name, audioBuffer);
+    fs.writeFileSync(imageTmpFile.name, imageBuffer);
 
     ffmpeg()
-      .input(audioStream)
-      .input(imageStream)
-      .inputFormat('m4a')
-      .inputFormat('mjpeg')
+      .input(audioTmpFile.name)
+      .input(imageTmpFile.name)
       .outputOptions('-map', '0:a')
       .outputOptions('-map', '1')
       .outputOptions('-c:v', 'mjpeg')
@@ -57,24 +54,30 @@ router.post('/convert', async (req, res) => {
       .outputOptions('-metadata:s:v', 'comment="Cover (front)"')
       .outputOptions('-metadata', `artist="${artists}"`)
       .outputOptions('-metadata', `album="${album}"`)
-      .format('mp3')
+      .save(outputTmpFile.name)
       .on('start', (cmd) => {
         console.log('Started ffmpeg with command:', cmd);
       })
       .on('end', () => {
         console.log('Conversion finished');
-        const outputBuffer = Buffer.concat(outputBuffers);
+        const outputBuffer = fs.readFileSync(outputTmpFile.name);
         res.set('Content-Type', 'audio/mpeg');
         res.set('Content-Disposition', 'attachment; filename=output.mp3');
         res.send(outputBuffer);
+
+        // Clean up temporary files
+        audioTmpFile.removeCallback();
+        imageTmpFile.removeCallback();
+        outputTmpFile.removeCallback();
       })
       .on('error', (err) => {
         console.error('Error during conversion', err);
         res.status(500).json({ error: 'Conversion failed' });
-      })
-      .pipe(new stream.PassThrough(), { end: true })
-      .on('data', (chunk) => {
-        outputBuffers.push(chunk);
+
+        // Clean up temporary files on error
+        audioTmpFile.removeCallback();
+        imageTmpFile.removeCallback();
+        outputTmpFile.removeCallback();
       });
 
   } catch (err) {
