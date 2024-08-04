@@ -14,7 +14,7 @@ const TEMP_DIR = '/tmp'
 
 app.use(
   cors({
-    origin: '*',
+    origin: '/*',
   }),
 )
 
