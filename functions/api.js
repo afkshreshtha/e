@@ -5,7 +5,7 @@ const cors = require('cors')
 const fs = require('fs')
 const path = require('path')
 const ffmpegPath = require('ffmpeg-static')
-const util = require("util");
+const util = require('util')
 const { exec } = require('child_process')
 const execPromise = util.promisify(exec)
 const app = express()
@@ -14,13 +14,11 @@ const TEMP_DIR = '/tmp'
 
 app.use(
   cors({
-    origin: 'http://localhost:3000',
+    origin: '*',
   }),
 )
 
 app.use(express.json())
-
-
 
 // Convert audio to MP3
 router.post('/convert', async (req, res) => {
