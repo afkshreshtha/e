@@ -17,16 +17,19 @@ exports.handler = async (event, context) => {
 
   const origin = event.headers.origin;
   const isAllowedOrigin = allowedOrigins.includes(origin);
-  console.log( "Oprions",event.httpMethod === 'OPTIONS')
-  console.log( "POST",event.httpMethod === 'POST')
-  if (event.httpMethod === 'POST') {
+
+  console.log('HTTP Method:', event.httpMethod);
+  console.log('Headers:', JSON.stringify(event.headers));
+  console.log('Is OPTIONS:', event.httpMethod === 'OPTIONS');
+
+  if (event.httpMethod === 'OPTIONS') {
     // Handle preflight request
     return {
       statusCode: 200,
       headers: {
         'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Custom-Headers',
+        'Access-Control-Allow-Headers': 'Content-Type',
         'Access-Control-Max-Age': '86400', // 24 hours
       },
     };
@@ -46,7 +49,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 403,
       headers: {
-        'Access-Control-Allow-Origin': origin,
+        'Access-Control-Allow-Origin': '',
       },
       body: JSON.stringify({ error: 'Origin not allowed' }),
     };
@@ -55,6 +58,7 @@ exports.handler = async (event, context) => {
   const body = JSON.parse(event.body);
   const { audioUrl, imageUrl, artists, album } = body;
   console.log(audioUrl, imageUrl, artists, album);
+
   const audioPath = path.join(TEMP_DIR, 'input.mp4');
   const imagePath = path.join(TEMP_DIR, 'cover.jpg');
   const outputPath = path.join(TEMP_DIR, 'output.mp3');
@@ -69,7 +73,7 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 500,
         headers: {
-          'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '*',
+          'Access-Control-Allow-Origin': origin,
         },
         body: JSON.stringify({ error: 'FFmpeg binary not found' }),
       };
@@ -122,7 +126,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 200,
       headers: {
-        'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '*',
+        'Access-Control-Allow-Origin': origin,
         'Content-Type': 'audio/mpeg',
       },
       body: fileData.toString('base64'),
@@ -133,7 +137,7 @@ exports.handler = async (event, context) => {
     return {
       statusCode: 500,
       headers: {
-        'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '*',
+        'Access-Control-Allow-Origin': origin,
       },
       body: JSON.stringify({
         error: 'Conversion failed',
