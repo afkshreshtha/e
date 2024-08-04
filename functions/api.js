@@ -13,6 +13,7 @@ exports.handler = async (event, context) => {
     'http://localhost:3000',
     'https://tunewave.vercel.app',
     'https://audichangerr.netlify.app',
+    '*'
   ];
 
   console.log('Event:', event); // Log the entire event object for debugging
