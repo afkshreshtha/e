@@ -2,6 +2,4 @@
   command = "chmod +x functions/bin/ffmpeg && npm run build"
   functions = "functions"
   publish = "."
-
-[functions]
   timeout = 50
