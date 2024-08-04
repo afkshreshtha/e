@@ -6,7 +6,7 @@ const util = require('util');
 const ffmpegPath = require('ffmpeg-static');
 
 const execPromise = util.promisify(exec);
-const TEMP_DIR = '/tmp'; // Temporary directory for serverless functions
+const TEMP_DIR = '/tmp'; 
 
 exports.handler = async (event, context) => {
   const allowedOrigins = [
@@ -18,30 +18,16 @@ exports.handler = async (event, context) => {
   const origin = event.headers.origin;
   const isAllowedOrigin = allowedOrigins.includes(origin);
 
-  console.log('HTTP Method:', event.httpMethod);
-  console.log('Headers:', JSON.stringify(event.headers));
-  console.log('Is OPTIONS:', event.httpMethod === 'OPTIONS');
-
   if (event.httpMethod === 'OPTIONS') {
-    // Handle preflight request
+
     return {
       statusCode: 200,
       headers: {
         'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
         'Access-Control-Allow-Methods': 'POST, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Max-Age': '86400', // 24 hours
+        'Access-Control-Max-Age': '86400', 
       },
-    };
-  }
-
-  if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers: {
-        'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '',
-      },
-      body: JSON.stringify({ error: 'Method not allowed' }),
     };
   }
 
@@ -55,6 +41,16 @@ exports.handler = async (event, context) => {
     };
   }
 
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      headers: {
+        'Access-Control-Allow-Origin': origin,
+      },
+      body: JSON.stringify({ error: 'Method not allowed' }),
+    };
+  }
+
   const body = JSON.parse(event.body);
   const { audioUrl, imageUrl, artists, album } = body;
   console.log(audioUrl, imageUrl, artists, album);
@@ -64,10 +60,10 @@ exports.handler = async (event, context) => {
   const outputPath = path.join(TEMP_DIR, 'output.mp3');
 
   try {
-    // Log FFmpeg path
+
     console.log('FFmpeg path:', ffmpegPath);
 
-    // Check if the FFmpeg binary exists
+
     if (!fs.existsSync(ffmpegPath)) {
       console.error('FFmpeg binary not found at', ffmpegPath);
       return {
@@ -79,7 +75,7 @@ exports.handler = async (event, context) => {
       };
     }
 
-    // Download audio file
+
     const audioResponse = await axios({
       url: audioUrl,
       method: 'GET',
@@ -93,7 +89,7 @@ exports.handler = async (event, context) => {
       audioWriter.on('error', reject);
     });
 
-    // Download image file
+
     const imageResponse = await axios({
       url: imageUrl,
       method: 'GET',
@@ -107,11 +103,10 @@ exports.handler = async (event, context) => {
       imageWriter.on('error', reject);
     });
 
-    // Log file existence
+
     console.log('Audio file exists:', fs.existsSync(audioPath));
     console.log('Image file exists:', fs.existsSync(imagePath));
 
-    // Execute ffmpeg command
     await execPromise(
       `${ffmpegPath} -i ${audioPath} -i ${imagePath} -c:v mjpeg -id3v2_version 3 -metadata:s:v title="Album cover" -metadata:s:v comment="Cover (front)" -metadata artist="${artists.join(
         ', ',
